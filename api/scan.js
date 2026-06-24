@@ -1,15 +1,21 @@
 export default async function handler(req, res) {
+  // CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST,OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-  if (req.method === "OPTIONS") return res.status(200).end();
-  if (req.method !== "POST") return res.status(405).json({ success: false });
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
+  if (req.method !== "POST") {
+    return res.status(405).json({ success: false });
+  }
 
   try {
     const { image, text } = req.body || {};
 
-    // TEXT
+    // ================= TEXT =================
     if (text) {
       return res.status(200).json({
         success: true,
@@ -25,13 +31,16 @@ export default async function handler(req, res) {
       });
     }
 
-    // IMAGE
+    // ================= IMAGE =================
     if (image) {
-      const formData = new URLSearchParams();
+      const formData = new FormData();
 
       formData.append("api_user", process.env.SIGHTENGINE_USER);
       formData.append("api_secret", process.env.SIGHTENGINE_SECRET);
+
+      // IMPORTANT: Sightengine accepts base64 OR URL
       formData.append("media", image);
+
       formData.append("models", "nudity,weapon,offensive");
 
       const response = await fetch(
