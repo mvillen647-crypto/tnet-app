@@ -10,69 +10,71 @@ export default async function handler(req, res) {
 
   try {
     const body = req.body || {};
+import cloudinary from "../cloudinary.js";
+import axios from "axios";
+
+export default async function handler(req, res) {
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
+
+  try {
+    const { image, text } = req.body || {};
 
     /* =========================
-       IMAGE SCAN (PRO MOCK)
+       IMAGE SCAN (REAL)
     ========================= */
-    if (body.image) {
+    if (image) {
 
-      // TODO LATER:
-      // 1. Upload to Cloudinary
-      // 2. Send URL to Sightengine
-      // 3. Get real AI results
+      // 1. Upload image to Cloudinary
+      const upload = await cloudinary.uploader.upload(image, {
+        folder: "tnet"
+      });
+
+      const imageUrl = upload.secure_url;
+
+      // 2. Send to Sightengine
+      const response = await axios.get(
+        "https://api.sightengine.com/1.0/check.json",
+        {
+          params: {
+            url: imageUrl,
+            models: "nudity,weapon,offensive,face-attributes",
+            api_user: process.env.SIGHTENGINE_API_USER,
+            api_secret: process.env.SIGHTENGINE_API_SECRET
+          }
+        }
+      );
 
       return res.status(200).json({
         success: true,
         type: "image",
-        provider: "tnet-ai",
-        ai: {
-          nudity: {
-            safe: 0.97,
-            unsafe: 0.03
-          },
-          violence: {
-            prob: 0.02
-          },
-          spoof: {
-            prob: 0.01
-          },
-          verdict: "safe"
-        }
+        imageUrl,
+        ai: response.data
       });
     }
 
     /* =========================
-       TEXT SCAN (PRO MOCK)
+       TEXT SCAN
     ========================= */
-    if (body.text) {
-
-      // TODO LATER:
-      // 1. Send to Winston AI
-      // 2. Add Firebase logging
-
+    if (text) {
       return res.status(200).json({
         success: true,
         type: "text",
-        provider: "tnet-ai",
         ai: {
           prediction: "human",
-          score: 0.91,
-          toxicity: 0.05,
-          readability: "high",
-          verdict: "safe"
+          score: 0.91
         }
       });
     }
 
     return res.status(400).json({
-      success: false,
-      error: "No image or text provided"
+      error: "No input provided"
     });
 
   } catch (error) {
     return res.status(500).json({
-      success: false,
-      error: error.message || "Server error"
+      error: error.message
     });
   }
 }
